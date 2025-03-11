@@ -148,23 +148,45 @@ def ignore_files(ignore_list, all_hosts_files):
             if ignore_file in all_hosts_files:
                 all_hosts_files.remove(ignore_file)
 
-def modify_host_line(match):
+def modify_host_line(match, bastion):
     host_keyword = match.group(1)
     words = match.group(2).split()
-    modified_words = " ".join(f"p-{word}" for word in words)
-    proxy_jump_line = "    proxyJump bastion"    
+    modified_words = " ".join(f"{bastion}-{word}" for word in words)
+    proxy_jump_line = f"    proxyJump {bastion}"    
     return f"{host_keyword} {modified_words}\n{proxy_jump_line}"
 
-def make_proxy_files(path, proxy_folder, all_hosts_files):
-    for host_file in all_hosts_files:
-        file = open(f"{path}/{host_file}", "r")
-        file_contents = file.read()
+def make_proxy_files(config_path, proxy_folder, all_hosts_files):
+    bastions = get_bastions(config_path)
+    for bastion in bastions:
+        bastion_proxy_path = f"{config_path}/{proxy_folder}/{bastion}"
+        os.mkdir(bastion_proxy_path)
+        for host_file in all_hosts_files:
+            file = open(f"{config_path}/{host_file}", "r")
+            file_contents = file.read()
 
-        new_file_contents = re.sub(r"(?i)^(Host) ([^\n]+)", modify_host_line, file_contents, flags=re.MULTILINE)
+            new_file_contents = re.sub(
+                r"(?i)^(Host) ([^\n]+)",
+                lambda match: modify_host_line(match, bastion),
+                file_contents,
+                flags=re.MULTILINE
+            )
 
-        proxy_file = open(f"{path}/{proxy_folder}/{host_file}", "x")
-        proxy_file.write(new_file_contents)
-        proxy_file.close()
+            proxy_file = open(f"{bastion_proxy_path}/{host_file}", "x")
+            proxy_file.write(new_file_contents)
+            proxy_file.close()
+    create_config_file(bastions, proxy_folder)
+
+def create_config_file(bastions, proxy_folder):
+    file = open(os.path.expanduser("~/.ssh/config"), "w")
+    relative_config_dir = "config.d/"
+    file_contents = f"include {relative_config_dir}* "
+    relative_proxy_dir = f"{relative_config_dir}{proxy_folder}"
+    for bastion in bastions:
+        relative_bastion_dir = f"{relative_proxy_dir}/{bastion}/* "
+        file_contents += relative_bastion_dir
+    file.write(file_contents)
+    file.close()
+
 
 def revert_proxy(path, proxy_folder):
     proxy_copy_dir = f"{path}/{proxy_folder}-copy"

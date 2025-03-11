@@ -19,5 +19,4 @@ Use `-b`/`--bastion` as argument to activate this option.
 Will transfer to all hosts with `bastion` in Host name<br><small>Not hostname in config file but Host</small>.
 
 ### Create proxy hosts
-Creates proxy hosts to ssh into when outside network using `bastion` host. These will all be within a `proxy/` folder and any contents of a previous folder `proxy/` folder will be removed. Will setup config with `ProxyPass bastion` for each individual host. 
-TBD Make a proxy for each bastion for redundancy.
+Creates proxy hosts to ssh into when outside network using each detected bastion host. These will all be within a `proxy/` folder and any contents of a previous folder `proxy/` folder will be removed. Will setup config with `host {bastion}-{hostname}` and `ProxyPass {bastion}` for each individual host and each individual bastion. 
